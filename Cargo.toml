@@ -1,0 +1,10 @@
+[package]
+name = "naubino-rs"
+version = "0.1.0"
+authors = ["Hendrik Sollich <hendrik@hoodie.de>"]
+
+[dependencies]
+nalgebra = "0.16.4"
+ncollide2d = "0.17.1"
+nphysics2d = "0.9.2"
+nphysics_testbed2d = "0.2.0"

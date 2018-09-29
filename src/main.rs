@@ -4,9 +4,12 @@ extern crate nphysics2d;
 extern crate nphysics_testbed2d;
 
 use na::{Isometry2, Point2, Vector2};
+
+use ncollide2d::events::ContactEvent;
 use ncollide2d::shape::{Ball, Cuboid, ShapeHandle};
+
 use nphysics2d::force_generator::Spring;
-use nphysics2d::joint::{RevoluteConstraint};
+use nphysics2d::joint::RevoluteConstraint;
 use nphysics2d::object::{BodyHandle, Material};
 use nphysics2d::volumetric::Volumetric;
 use nphysics2d::world::World;
@@ -45,9 +48,9 @@ fn main() {
     /*
      * Create the boxes
      */
-    let num = 12;
+    let num = 4;
     let rad = 0.1;
-    let shift = rad * 2.0 + 0.002;
+    let shift = rad * 2.0 + 0.02;
     let centerx = shift * (num as f32) / 2.0;
     let centery = shift / 2.0;
 
@@ -105,7 +108,48 @@ fn main() {
     /*
      * Set up the testbed.
      */
+
+    world.collision_world();
+
     let mut testbed = Testbed::new(world);
     testbed.look_at(Point2::new(0.0, -2.5), 95.0);
+
+    testbed.add_callback(move |world_owner, _graphics, _| {
+        let colliding_bodies = {
+            let world = world_owner.get();
+
+            world
+                .contact_events()
+                .iter()
+                .filter_map(|event| {
+                    if let ContactEvent::Started(a, b) = event {
+                        if let (Some(a), Some(b)) = (
+                            world.collider_body_handle(*a),
+                            world.collider_body_handle(*b),
+                        ) {
+                            Some((a, b))
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                }).collect::<Vec<_>>()
+        };
+        colliding_bodies
+            .iter()
+            .for_each(|(a, b)| join_with_each_other(&mut *world_owner.get_mut(), *a, *b));
+    });
+
     testbed.run();
+}
+
+fn join_with_each_other(world: &mut World<f32>, a: BodyHandle, b: BodyHandle) {
+    let rad = 0.1;
+    world.add_constraint(RevoluteConstraint::new(
+        a,
+        b,
+        na::origin(),
+        Point2::new(-rad * 4.0, 0.0),
+    ));
 }
